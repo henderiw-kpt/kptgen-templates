@@ -1,0 +1,107 @@
+apiVersion: fn.kptgen.dev/v1alpha1
+kind: Pod
+metadata:
+  name: pod
+  annotations:
+    config.kubernetes.io/local-config: "true"
+  namespace: ndd-system
+spec:
+  type: deployment
+  replicas: 1
+  permissionRequests:
+    controller:
+    - apiGroups: [target.yndd.io]
+      resources: [targets, targets/status]
+      verbs: [get, list, watch, update, patch, create, delete]
+    leader-election:
+    - apiGroups: [""]
+      resources: [configmaps]
+      verbs: [get, list, watch, update, patch, create, delete]
+    - apiGroups: [coordination.k8s.io]
+      resources: [leases]
+      verbs: [get, list, watch, update, patch, create, delete]
+    - apiGroups: [""]
+      resources: [events]
+      verbs: [create, patch]
+  services:
+  - spec:
+      ports:
+      - name: controller
+        port: 443
+        targetPort: 9443
+        protocol: TCP
+  template:
+    spec:
+      containers:
+      - name: controller
+        image: yndd/admin-controller:latest
+        command:
+        - /manager
+        args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        - --debug 
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        # TODO(user): Configure the resources accordingly based on the project requirements.
+        # More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: "POD_IP"
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.name
+        - name: "NODE_NAME"
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        - name: "NODE_IP"
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.hostIP
+        - name: GRPC_SVC_NAME
+          vaiue: xx
+        - name: GRPC_CERT_SECRET_NAME
+          value: xx
+        - name: SERVICE_DISCOVERY
+          value: k8s
+        - name: SERVICE_DISCOVERY_NAMESPACE
+          value: ndd-system
+        - name: SERVICE_DISCOVERY_DCNAME
+      
+

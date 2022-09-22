@@ -1,0 +1,24 @@
+apiVersion: fn.kptgen.dev/v1alpha1
+kind: Webhook
+metadata:
+  name: webhook
+  annotations:
+    config.kubernetes.io/local-config: "true"
+  namespace: ndd-system
+spec:
+  selector:
+    kind: Deployment
+    containerName: controller
+  service:
+    port: 443
+    targetPort: 9443
+  services:
+  - spec:
+      ports:
+      - name: webhook
+        port: 443
+        targetPort: 9443
+        protocol: TCP
+  certificate:
+    issuerRef: selfsigned-issuer
+  
