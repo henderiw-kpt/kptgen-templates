@@ -9,9 +9,6 @@ spec:
   selector:
     kind: Deployment
     containerName: controller
-  service:
-    port: 443
-    targetPort: 9443
   services:
   - spec:
       ports:
